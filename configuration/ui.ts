@@ -1,6 +1,6 @@
 import { AI_NAME, OWNER_NAME } from "@/configuration/identity";
 
-export const CHAT_HEADER: string = `Your AI-powered running companion`;
+export const CHAT_HEADER: string = `Your AI-powered running companion.`;
 export const MESSAGE_PLACEHOLDER: string = `Ask me anything about training, injuries, or running motivation!`;
 export const FOOTER_MESSAGE: string = `Keep moving forward—every step counts!`;
 export const CLEAR_BUTTON_TEXT: string = `Clear Chat`;
