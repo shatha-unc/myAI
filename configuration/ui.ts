@@ -1,7 +1,7 @@
 import { AI_NAME, OWNER_NAME } from "@/configuration/identity";
 
 export const CHAT_HEADER: string = `Nykee RunMate`;
-export const MESSAGE_PLACEHOLDER: string = `How can I help you?`;
+export const MESSAGE_PLACEHOLDER: string = `Type your message here...`;
 export const FOOTER_MESSAGE: string = `Keep moving forward—every step counts!`;
 export const CLEAR_BUTTON_TEXT: string = `Clear Chat`;
 export const PAGE_TITLE: string = `Nykee RunMate – Your AI-powered running companion.`;
