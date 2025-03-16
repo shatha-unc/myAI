@@ -1,5 +1,5 @@
 # Read Me
-# Nykee RunMate – AI-Powered Running Assistant
+Nykee RunMate – AI-Powered Running Assistant
 An AI-powered running assistant designed to help runners optimize their training, prevent injuries, and select the right running shoes. Built on Nike’s official content, Nykee RunMate offers expert-backed guidance on structured training plans, running techniques, and recovery strategies.
 
 Key Features:
