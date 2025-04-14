@@ -40,4 +40,19 @@ export class IntentionModule {
     }
     return response.choices[0].message.parsed;
   }
+
+  static async moderateMessage({
+    message,
+    openai,
+  }: {
+    message: string;
+    openai: OpenAI;
+  }): Promise<boolean> {
+    const response = await openai.moderations.create({
+      model: "omni-moderation-latest",
+      input: message,
+    });
+    console.log("response.results[0].flagged", response.results[0].flagged);
+    return response.results[0].flagged;
+  }
 }

@@ -7,6 +7,7 @@ import { PINECONE_INDEX_NAME } from "@/configuration/pinecone";
 import Anthropic from "@anthropic-ai/sdk";
 import { SAVE_TO_HISTORY } from "@/configuration/supabase";
 import { saveMessageToHistory } from "@/utilities/supabase";
+import { USE_CONTENT_MODERATION } from "@/configuration/chat";
 
 export const maxDuration = 60;
 
@@ -47,17 +48,35 @@ const providers: AIProviders = {
   fireworks: fireworksClient,
 };
 
-async function determineIntention(chat: Chat): Promise<Intention> {
-  return await IntentionModule.detectIntention({
+async function evaluateMessage(chat: Chat): Promise<{
+  intention: Intention;
+  isFlagged: boolean | undefined;
+}> {
+  const intentionPromise = IntentionModule.detectIntention({
     chat: chat,
     openai: providers.openai,
   });
+
+  let moderationPromise: Promise<boolean> | undefined;
+  if (USE_CONTENT_MODERATION) {
+    moderationPromise = IntentionModule.moderateMessage({
+      message: chat.messages[chat.messages.length - 1].content,
+      openai: providers.openai,
+    });
+  }
+
+  const [intention, isFlagged] = await Promise.all([
+    intentionPromise,
+    moderationPromise || Promise.resolve(undefined),
+  ]);
+
+  return { intention, isFlagged };
 }
 
 export async function POST(req: Request) {
   const { chat } = await req.json();
 
-  const intention: Intention = await determineIntention(chat);
+  const { intention, isFlagged } = await evaluateMessage(chat);
 
   if (SAVE_TO_HISTORY) {
     await saveMessageToHistory({
@@ -66,9 +85,9 @@ export async function POST(req: Request) {
     });
   }
 
-  if (intention.type === "question") {
+  if (intention.type === "question" && !isFlagged) {
     return ResponseModule.respondToQuestion(chat, providers, pineconeIndex);
-  } else if (intention.type === "hostile_message") {
+  } else if (intention.type === "hostile_message" || isFlagged) {
     return ResponseModule.respondToHostileMessage(chat, providers);
   } else {
     return ResponseModule.respondToRandomMessage(chat, providers);
