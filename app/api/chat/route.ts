@@ -5,6 +5,8 @@ import { IntentionModule } from "@/modules/intention";
 import { ResponseModule } from "@/modules/response";
 import { PINECONE_INDEX_NAME } from "@/configuration/pinecone";
 import Anthropic from "@anthropic-ai/sdk";
+import { SAVE_TO_HISTORY } from "@/configuration/supabase";
+import { saveMessageToHistory } from "@/utilities/supabase";
 
 export const maxDuration = 60;
 
@@ -56,6 +58,13 @@ export async function POST(req: Request) {
   const { chat } = await req.json();
 
   const intention: Intention = await determineIntention(chat);
+
+  if (SAVE_TO_HISTORY) {
+    await saveMessageToHistory({
+      role: "user",
+      content: chat.messages[chat.messages.length - 1].content,
+    });
+  }
 
   if (intention.type === "question") {
     return ResponseModule.respondToQuestion(chat, providers, pineconeIndex);

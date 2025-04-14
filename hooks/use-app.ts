@@ -16,6 +16,8 @@ import {
   StreamedError,
   streamedErrorSchema,
 } from "@/types";
+import { SAVE_TO_HISTORY } from "@/configuration/supabase";
+import { saveMessageToHistory } from "@/utilities/supabase";
 
 export default function useApp() {
   const initialAssistantMessage: DisplayMessage = {
@@ -117,7 +119,14 @@ export default function useApp() {
     ]);
   };
 
-  const handleStreamedDone = (streamedDone: StreamedDone) => {};
+  const handleStreamedDone = (streamedDone: StreamedDone) => {
+    if (SAVE_TO_HISTORY) {
+      saveMessageToHistory({
+        role: "assistant",
+        content: streamedDone.final_message,
+      });
+    }
+  };
 
   const routeResponseToProperHandler = (payload: string) => {
     const payloads = payload.split("\n").filter((p) => p.trim() !== "");
