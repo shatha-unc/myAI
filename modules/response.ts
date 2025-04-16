@@ -8,15 +8,10 @@ import {
   Citation,
 } from "@/types";
 import {
-  convertToCoreMessages,
-  embedHypotheticalData,
   generateHypotheticalData,
-  getSourcesFromChunks,
-  searchForChunksUsingEmbedding,
-  getContextFromSources,
-  getCitationsFromChunks,
-  buildPromptFromContext,
-} from "@/utilities/chat";
+  searchForChunksUsingCustomEmbedding,
+  searchForChunksUsingIntegratedEmbedding,
+} from "@/utilities/querying";
 import {
   queueAssistantResponse,
   queueError,
@@ -26,7 +21,11 @@ import {
   HISTORY_CONTEXT_LENGTH,
   DEFAULT_RESPONSE_MESSAGE,
 } from "@/configuration/chat";
-import { stripMessagesOfCitations } from "@/utilities/chat";
+import {
+  convertToCoreMessages,
+  embedHypotheticalData,
+  stripMessagesOfCitations,
+} from "@/utilities/chat";
 import {
   RESPOND_TO_HOSTILE_MESSAGE_SYSTEM_PROMPT,
   RESPOND_TO_QUESTION_BACKUP_SYSTEM_PROMPT,
@@ -44,6 +43,11 @@ import {
   QUESTION_RESPONSE_TEMPERATURE,
   RANDOM_RESPONSE_TEMPERATURE,
 } from "@/configuration/models";
+import { USE_PINECONE_INTEGRATED_EMBEDDING } from "@/configuration/pinecone";
+import { getSourcesFromChunks } from "@/utilities/sources";
+import { getCitationsFromChunks } from "@/utilities/sources";
+import { getContextFromSources } from "@/utilities/sources";
+import { Index } from "@pinecone-database/pinecone";
 
 /**
  * ResponseModule is responsible for collecting data and building a response
@@ -140,7 +144,7 @@ export class ResponseModule {
   static async respondToQuestion(
     chat: Chat,
     providers: AIProviders,
-    index: any
+    index: Index
   ): Promise<Response> {
     /**
      * Respond to the user when they send a QUESTION
@@ -160,17 +164,27 @@ export class ResponseModule {
             chat,
             providers.openai
           );
-          const { embedding }: { embedding: number[] } =
-            await embedHypotheticalData(hypotheticalData, providers.openai);
+          let chunks: Chunk[] = [];
           queueIndicator({
             controller,
             status: "Reading through documents",
             icon: "searching",
           });
-          const chunks: Chunk[] = await searchForChunksUsingEmbedding(
-            embedding,
-            index
-          );
+          if (!USE_PINECONE_INTEGRATED_EMBEDDING) {
+            console.log("Using OpenAI embedding");
+            const { embedding }: { embedding: number[] } =
+              await embedHypotheticalData(hypotheticalData, providers.openai);
+            chunks = await searchForChunksUsingCustomEmbedding(
+              embedding,
+              index
+            );
+          } else {
+            console.log("Using Pinecone embedding");
+            chunks = await searchForChunksUsingIntegratedEmbedding(
+              index,
+              hypotheticalData
+            );
+          }
           const sources: Source[] = await getSourcesFromChunks(chunks);
           queueIndicator({
             controller,
@@ -200,7 +214,6 @@ export class ResponseModule {
             temperature: QUESTION_RESPONSE_TEMPERATURE,
           });
         } catch (error: any) {
-          console.error("Error in respondToQuestion:", error);
           queueError({
             controller,
             error_message: error.message ?? DEFAULT_RESPONSE_MESSAGE,
